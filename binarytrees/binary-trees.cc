@@ -80,7 +80,7 @@ void runBinaryTrees() {
 
 int main() {
     double d1 = DoubleTime();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
         runBinaryTrees();
     }
     double d2 = DoubleTime();
