@@ -24,8 +24,7 @@ double DoubleTime() {
 #include <boost/pool/object_pool.hpp>
 
 
-const size_t    LINE_SIZE = 64;
-
+static int32_t check = 0;
 
 struct Node 
 {
@@ -39,9 +38,10 @@ struct Node
 
     int check() const 
     {
-        if (l)
-            return l->check() + i - r->check();
-        else return i;
+      if (l)
+        return l->check() + i - r->check();
+      else
+        return i;
     }
 };
 
@@ -72,60 +72,47 @@ int GetThreadCount()
     return count;
 }
 
-int runBinaryTrees(int argc, char *argv[]) 
+int runBinaryTrees() 
 {
+  for ( int n = 4; n <= 7; n += 1 )
+  {
     int min_depth = 4;
-    int max_depth = std::max(min_depth+2,
-                             (argc == 2 ? atoi(argv[1]) : 10));
+    int max_depth = std::max(min_depth+2, n);
     int stretch_depth = max_depth+1;
 
     // Alloc then dealloc stretchdepth tree
     {
-        NodePool store;
-        Node *c = make(0, stretch_depth, store);
-        // std::cout << "stretch tree of depth " << stretch_depth << "\t "
-                  //<< "check: " << c->check() << std::endl;
+      NodePool store;
+      Node *c = make(0, stretch_depth, store);
+      check += c->check();
     }
 
     NodePool long_lived_store;
     Node *long_lived_tree = make(0, max_depth, long_lived_store);
 
-    // buffer to store output of each thread
-    //char *outputstr = (char*)malloc(LINE_SIZE * (max_depth +1) * sizeof(char));
-
     for (int d = min_depth; d <= max_depth; d += 2) 
     {
-        int iterations = 1 << (max_depth - d + min_depth);
-        int c = 0;
+      int iterations = 1 << (max_depth - d + min_depth);
 
-        for (int i = 1; i <= iterations; ++i) 
-        {
-            NodePool store;
-            Node *a = make(i, d, store), *b = make(-i, d, store);
-            c += a->check() + b->check();
-        }
-
-        // each thread write to separate location
-        //sprintf(outputstr + LINE_SIZE * d, "%d\t trees of depth %d\t check: %d\n", (2 * iterations), d, c);
+      for (int i = 1; i <= iterations; ++i) 
+      {
+        NodePool store;
+        Node* a = make(i, d, store);
+        Node* b = make(i, d, store);
+        check += a->check() + b->check();
+      }
     }
+  }
 
-    // print all results
-    //for (int d = min_depth; d <= max_depth; d += 2) 
-        //printf("%s", outputstr + (d * LINE_SIZE) );
-    //free(outputstr);
-
-    //std::cout << "long lived tree of depth " << max_depth << "\t "
-    //          << "check: " << (long_lived_tree->check()) << "\n";
-
-    return 0;
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
     double d1 = DoubleTime();
     for (int i = 0; i < 1000; i++) {
-        runBinaryTrees(argc, argv);
+        runBinaryTrees();
     }
     double d2 = DoubleTime();
-    fprintf(stderr, "CXX Time: %lf \n", (d2 - d1));
+    fprintf(stderr, "CXX Time: %lf  (count=%d)\n", (d2 - d1), check);
     return 0;
 }
