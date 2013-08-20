@@ -29,21 +29,33 @@ struct TreeNode {
         return item + left->itemCheck() - right->itemCheck();
     }
     void* operator new(size_t sz);
-    void operator delete(void*) {}
 };
-                              
-char nodes[sizeof(TreeNode) * 16319100];
-static int count = 0;
+
+char* memory;
+int* index;
+
+template<int Size>
+struct Pool
+{
+  inline void use()
+  {
+    reset();
+    ::memory = memory;
+    ::index = &index;
+  }
+
+  inline void reset()
+  { index = 0; }
+
+  char memory[sizeof(TreeNode) * Size];
+  int index;
+};
 
 void* TreeNode::operator new(size_t sz)
-{
-  return &nodes[(count++) * sizeof(TreeNode)];
-}
+{ return &memory[((*index)++) * sizeof(TreeNode)]; }
 
-inline void resetPool()
-{
-  count = 0;
-}
+Pool<512> poolMain;
+Pool<128> poolSub;
 
 TreeNode *bottomUpTree(int item, int depth) {
     if (depth > 0) {
@@ -54,7 +66,6 @@ TreeNode *bottomUpTree(int item, int depth) {
     return new TreeNode(NULL, NULL, item);
 }
 
-
 static int32_t ret = 0;
 static int32_t check = 0;
 
@@ -64,18 +75,20 @@ void runBinaryTrees() {
         int maxDepth = std::max(minDepth + 2, n);
         int stretchDepth = maxDepth + 1;
         
-        resetPool();
+        poolMain.use();
         TreeNode *tn = bottomUpTree(0,stretchDepth);
         check += tn->itemCheck();
-        resetPool();
+        poolMain.reset();
         
         TreeNode *longLivedTree = bottomUpTree(0,maxDepth);
         for (int depth=minDepth; depth<=maxDepth; depth+=2){
             int iterations = 1 << (maxDepth - depth + minDepth);
 
             for (int i=1; i<=iterations; i++){
+                poolSub.use();
                 TreeNode *t1 = bottomUpTree(i,depth);
                 check += t1->itemCheck();
+                poolSub.use();
                 TreeNode *t2 = bottomUpTree(i,depth);
                 check += t2->itemCheck();
             }
@@ -83,7 +96,6 @@ void runBinaryTrees() {
         ret = longLivedTree->itemCheck();
     }
 }
-
 
 int main() {
     double d1 = DoubleTime();
